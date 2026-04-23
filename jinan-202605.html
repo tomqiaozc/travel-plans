@@ -371,7 +371,10 @@ function renderMap() {
     }
   });
 
-  if (allMarkers.length > 0) map.setFitView(allMarkers, false, [50, 50, 50, 50]);
+  if (allMarkers.length > 0) {
+    map.setFitView(allMarkers, false, [50, 50, 50, 50]);
+    if (map.getZoom() < 11) map.setZoom(11);
+  }
 
   renderLegend(days);
 }
