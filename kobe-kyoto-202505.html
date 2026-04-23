@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>神户·京都 5日游</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBE6HVqqrvLaqVYfOQtoJFH-xrgJtPdllw"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+
+    #app { display: flex; height: 100vh; }
+
+    /* --- Sidebar --- */
+    #sidebar {
+      width: 400px; min-width: 400px;
+      overflow-y: auto; background: #fff;
+      border-right: 1px solid #e5e7eb;
+      display: flex; flex-direction: column;
+    }
+    #sidebar-header {
+      padding: 16px 20px; border-bottom: 1px solid #e5e7eb;
+      background: #fff; position: sticky; top: 0; z-index: 10;
+    }
+    #sidebar-header h1 { font-size: 18px; font-weight: 700; color: #1f2937; }
+    #sidebar-header p { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+    #sidebar-content { padding: 12px; flex: 1; }
+
+    /* --- Day group --- */
+    .day-group {
+      border-left: 4px solid #ccc;
+      border-radius: 8px; padding: 12px;
+      margin-bottom: 12px; background: #fafafa;
+    }
+    .day-group-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .day-group-title { font-size: 14px; font-weight: 700; color: #374151; }
+    .day-nav-link {
+      font-size: 11px; color: #3b82f6; text-decoration: none;
+      padding: 2px 8px; border: 1px solid #3b82f6; border-radius: 4px;
+    }
+    .day-nav-link:hover { background: #3b82f6; color: #fff; }
+
+    .place-list { min-height: 40px; }
+    .place-list-empty { text-align: center; color: #9ca3af; font-size: 12px; padding: 12px 0; }
+
+    /* --- Place card --- */
+    .place-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 6px; cursor: grab;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .place-card:hover { border-color: #93c5fd; }
+    .place-card.sortable-ghost { opacity: 0.4; }
+    .place-card.sortable-chosen { box-shadow: 0 8px 25px rgba(0,0,0,0.15); transform: scale(1.02); }
+
+    .place-name {
+      font-size: 13px; font-weight: 600; color: #1f2937;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .place-type-badge {
+      font-size: 10px; padding: 1px 6px; border-radius: 9999px;
+      font-weight: 500;
+    }
+    .type-attraction { background: #dbeafe; color: #1d4ed8; }
+    .type-restaurant { background: #fef3c7; color: #92400e; }
+    .type-shopping { background: #fce7f3; color: #9d174d; }
+    .type-hotel { background: #e0e7ff; color: #4338ca; }
+    .type-other { background: #f3f4f6; color: #6b7280; }
+
+    .place-meta { font-size: 11px; color: #6b7280; margin-top: 4px; }
+    .place-desc { font-size: 12px; color: #4b5563; margin-top: 4px; }
+    .place-tips { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .place-link {
+      font-size: 11px; color: #3b82f6; text-decoration: none; margin-top: 4px;
+      display: inline-block;
+    }
+    .place-link:hover { color: #1d4ed8; }
+    .place-distance {
+      font-size: 11px; color: #3b82f6; margin-top: 2px;
+    }
+
+    /* --- Map --- */
+    #map-container { flex: 1; position: relative; }
+    #map { width: 100%; height: 100%; }
+
+    /* --- Legend --- */
+    #legend {
+      position: absolute; bottom: 12px; left: 12px;
+      background: rgba(255,255,255,0.92); border-radius: 8px;
+      padding: 8px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      display: flex; gap: 12px; font-size: 12px; z-index: 5;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .legend-item:hover { opacity: 0.7; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3);
+    }
+
+    /* --- Mobile --- */
+    @media (max-width: 768px) {
+      #app { flex-direction: column; }
+      #sidebar { width: 100%; min-width: unset; height: 50vh; border-right: none; border-bottom: 1px solid #e5e7eb; }
+      #map-container { height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h1 id="trip-title"></h1>
+      <p id="trip-subtitle"></p>
+    </div>
+    <div id="sidebar-content"></div>
+  </div>
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="legend"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// TRIP DATA — replaced by the Skill at generation time
+// ============================================================
+const TRIP_DATA = {"id": "kobe-kyoto-2025-05", "title": "神户·京都 5日游", "subtitle": "2025年5月15-19日 · 一人行 · 综合玩法 · 适中节奏", "total_days": 5, "day_labels": {"1": "抵达神户·三宫初探", "2": "姬路城一日游", "3": "须磨水族馆·北野异人馆", "4": "海之京都·天桥立&伊根", "5": "京都经典一日游·返程"}, "places": [{"name": "三宫センター街", "city": "神戸", "type": "shopping", "day_number": 1, "order_in_day": 1, "time_slot": "afternoon", "latitude": 34.690144599999996, "longitude": 135.1896185, "google_place_id": "ChIJFwhQ3PyOAGARUkkK9O-mgDA", "google_maps_url": "https://maps.google.com/?cid=3494976860361214290&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "神户最繁华的商圈", "tips": "药妆店、商场集中", "stay_duration": "2小时"}, {"name": "八坐和 三宮本店", "city": "神戸", "type": "restaurant", "day_number": 1, "order_in_day": 2, "time_slot": "evening", "latitude": 34.6899503, "longitude": 135.1918727, "google_place_id": "ChIJwyK3ePuOAGARGEhuOtodslQ", "google_maps_url": "https://maps.google.com/?cid=6102973268160825368&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "神户和牛烧肉，当地人常去", "tips": "人均460rmb，推荐和牛寿司和冷面", "stay_duration": "1.5小时"}, {"name": "神戸ハーバーランド", "city": "神戸", "type": "attraction", "day_number": 1, "order_in_day": 3, "time_slot": "evening", "latitude": 34.6800711, "longitude": 135.18351429999998, "google_place_id": "ChIJD5fHbgePAGARpXshMiA87rA", "google_maps_url": "https://maps.google.com/?cid=12749193704110128037&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "神户百万美元夜景", "tips": "港口灯光倒映海面", "stay_duration": "1小时"}, {"name": "姫路城", "city": "姫路", "type": "attraction", "day_number": 2, "order_in_day": 1, "time_slot": "morning", "latitude": 34.839449, "longitude": 134.6939047, "google_place_id": "ChIJsyQzogPgVDURsYG6bi-MT3o", "google_maps_url": "https://maps.google.com/?cid=8813417131136418225&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "日本三大名城，白鹭城", "tips": "门票1050日元含好古园，需脱鞋穿厚袜子", "stay_duration": "2小时"}, {"name": "好古園", "city": "姫路", "type": "attraction", "day_number": 2, "order_in_day": 2, "time_slot": "noon", "latitude": 34.8370858, "longitude": 134.6904017, "google_place_id": "ChIJDxT9HRvgVDURt_SPzwe2f_E", "google_maps_url": "https://maps.google.com/?cid=17401827629846230199&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "精美日式庭园，园内可吃定食", "tips": "联票只多50日元", "stay_duration": "1.5小时"}, {"name": "姫路駅 ピオレ", "city": "姫路", "type": "shopping", "day_number": 2, "order_in_day": 3, "time_slot": "afternoon", "latitude": 34.8272897, "longitude": 134.6908144, "google_place_id": "ChIJlZh2Mm3gVDURCnxmDiRKB_A", "google_maps_url": "https://maps.google.com/?cid=17295874412660554762&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "LOFT、BEAMS等商场，药妆齐全", "tips": "试试姬路特色杏仁酱吐司", "stay_duration": "1.5小时"}, {"name": "神戸須磨シーワールド", "city": "神戸", "type": "attraction", "day_number": 3, "order_in_day": 1, "time_slot": "morning", "latitude": 34.644138399999996, "longitude": 135.1282411, "google_place_id": "ChIJgQxfKgCFAGARDDvvrnSqDw0", "google_maps_url": "https://maps.google.com/?cid=941158265271565068&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "2024年重新开馆的全新水族馆", "tips": "JR須磨海浜公園站步行即到", "stay_duration": "2.5小时"}, {"name": "一嗹 ラーメン 中山手本店", "city": "神戸", "type": "restaurant", "day_number": 3, "order_in_day": 2, "time_slot": "noon", "latitude": 34.6958988, "longitude": 135.1921745, "google_place_id": "ChIJiXsfA2KPAGARqHC2vzXuGEo", "google_maps_url": "https://maps.google.com/?cid=5339279272864805032&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "辣味鸡汤拉面，麻酱味道", "tips": "人均60rmb，只收现金", "stay_duration": "45分钟"}, {"name": "北野異人館街", "city": "神戸", "type": "attraction", "day_number": 3, "order_in_day": 3, "time_slot": "afternoon", "latitude": 34.7007283, "longitude": 135.19079059999999, "google_place_id": "ChIJT6cViuCOAGARegX_ORkvbs0", "google_maps_url": "https://maps.google.com/?cid=14802820810607101306&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "明治时代外国人居住区", "tips": "从三宫步行上坡15分钟", "stay_duration": "2小时"}, {"name": "ブーランジェリー RIKI", "city": "神戸", "type": "restaurant", "day_number": 3, "order_in_day": 4, "time_slot": "afternoon", "latitude": 34.6873542, "longitude": 135.1868601, "google_place_id": "ChIJr86wgP2OAGAR_AsmofEc_5g", "google_maps_url": "https://maps.google.com/?cid=11024562236942584828&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "酥皮面包非常优秀", "tips": "人均20rmb，只收现金", "stay_duration": "20分钟"}, {"name": "こうき屋 汤咖喱", "city": "神戸 元町", "type": "restaurant", "day_number": 3, "order_in_day": 5, "time_slot": "evening", "latitude": 34.6858471, "longitude": 135.18234429999998, "google_place_id": "ChIJmRohfAOPAGAR8LuwRGBydGc", "google_maps_url": "https://maps.google.com/?cid=7454709040999873520&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "汤咖喱，推荐番茄味", "tips": "人均85rmb，可微信支付", "stay_duration": "1小时"}, {"name": "神戸ポートタワー", "city": "神戸", "type": "attraction", "day_number": 3, "order_in_day": 6, "time_slot": "evening", "latitude": 34.682629999999996, "longitude": 135.1866995, "google_place_id": "ChIJweTiKACPAGARgqyoB9hC7rc", "google_maps_url": "https://maps.google.com/?cid=13253604249006812290&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "神户港塔夜景", "tips": "Mosaic摩天轮也在附近", "stay_duration": "1小时"}, {"name": "天橋立", "city": "京都府 宮津", "type": "attraction", "day_number": 4, "order_in_day": 1, "time_slot": "morning", "latitude": 35.5698022, "longitude": 135.19182039999998, "google_place_id": "ChIJl-LBxy2X_18RgWzksvPOYbo", "google_maps_url": "https://maps.google.com/?cid=13430243109869218945&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "日本三景之一，沙洲上8000棵松树", "tips": "缆车往返1000日元，推荐单人吊椅", "stay_duration": "2.5小时"}, {"name": "伊根湾めぐり遊覧船", "city": "京都府 伊根町", "type": "attraction", "day_number": 4, "order_in_day": 2, "time_slot": "afternoon", "latitude": 35.670564, "longitude": 135.2773675, "google_place_id": "ChIJ5dKjhYaf_18RWgwkvOIyeZs", "google_maps_url": "https://maps.google.com/?cid=11203041497461296218&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "游船观光伊根舟屋", "tips": "往返1200日元，买虾条喂海鸥", "stay_duration": "1小时"}, {"name": "伊根の舟屋", "city": "京都府 伊根町", "type": "attraction", "day_number": 4, "order_in_day": 3, "time_slot": "afternoon", "latitude": 35.675712, "longitude": 135.2874835, "google_place_id": "ChIJC1Z_so2f_18RieRebkLKVII", "google_maps_url": "https://maps.google.com/?cid=9391353509642691721&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "230余栋舟屋沿海岸线排开", "tips": "沿老街走走拍拍，搭巴士回天桥立", "stay_duration": "1.5小时"}, {"name": "伏見稲荷大社", "city": "京都", "type": "attraction", "day_number": 5, "order_in_day": 1, "time_slot": "morning", "latitude": 34.9676945, "longitude": 135.7791876, "google_place_id": "ChIJIW0uPRUPAWAR6eI6dRzKGns", "google_maps_url": "https://maps.google.com/?cid=8870624639634301673&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "千本鸟居，红色隧道", "tips": "JR稲荷站出站即到", "stay_duration": "1.5小时"}, {"name": "清水寺", "city": "京都", "type": "attraction", "day_number": 5, "order_in_day": 2, "time_slot": "morning", "latitude": 34.9946662, "longitude": 135.784661, "google_place_id": "ChIJB_vchdMIAWARujTEUIZlr2I", "google_maps_url": "https://maps.google.com/?cid=7111013964196361402&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "京都地标，悬空清水舞台", "tips": "初夏新绿非常美", "stay_duration": "1.5小时"}, {"name": "二年坂 三年坂", "city": "京都", "type": "attraction", "day_number": 5, "order_in_day": 3, "time_slot": "noon", "latitude": 34.9986043, "longitude": 135.7808222, "google_place_id": "ChIJqZsSA9AIAWARewnW_cioTog", "google_maps_url": "https://maps.google.com/?cid=9821973418547218811&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "京都最有味道的古街石板坡道", "tips": "可以吃抹茶甜品", "stay_duration": "1小时"}, {"name": "八坂神社", "city": "京都", "type": "attraction", "day_number": 5, "order_in_day": 4, "time_slot": "afternoon", "latitude": 35.0036559, "longitude": 135.7785534, "google_place_id": "ChIJqewQoHkIAWAR6RokWp3Iesc", "google_maps_url": "https://maps.google.com/?cid=14374021738854095593&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "祇园象征，朱红色楼门", "tips": "步行可达", "stay_duration": "30分钟"}, {"name": "鴨川", "city": "京都", "type": "attraction", "day_number": 5, "order_in_day": 5, "time_slot": "afternoon", "latitude": 34.9804985, "longitude": 135.7671783, "google_place_id": "ChIJKZsHV-QIAWARAwyExuxohlc", "google_maps_url": "https://maps.google.com/?cid=6306843694331071491&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA", "description": "京都母亲河，河边散步惬意", "tips": "路过拍照感受氛围", "stay_duration": "30分钟"}]};
+
+// ============================================================
+// Constants
+// ============================================================
+const DAY_COLORS = ['#ef4444','#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#6366f1'];
+const DAY_BG     = ['#fef2f2','#eff6ff','#f0fdf4','#fefce8','#faf5ff','#fdf2f8','#eef2ff'];
+const DAY_BORDER = ['#f87171','#60a5fa','#4ade80','#facc15','#c084fc','#f472b6','#818cf8'];
+const TYPE_ICONS = { attraction: '🏛️', restaurant: '🍜', shopping: '🛍️', hotel: '🏨', other: '📍' };
+
+const STORAGE_KEY = 'travel-plan-order-' + (TRIP_DATA.id || document.title);
+
+// ============================================================
+// State
+// ============================================================
+let places = TRIP_DATA.places || [];
+let map, infoWindow;
+let markers = [];
+let polylines = [];
+
+// ============================================================
+// LocalStorage persistence
+// ============================================================
+function saveOrder() {
+  const order = {};
+  places.forEach(p => { order[p.name] = { day_number: p.day_number, order_in_day: p.order_in_day }; });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+}
+
+function loadOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved) return;
+    places.forEach(p => {
+      if (saved[p.name]) {
+        p.day_number = saved[p.name].day_number;
+        p.order_in_day = saved[p.name].order_in_day;
+      }
+    });
+  } catch {}
+}
+
+// ============================================================
+// Haversine
+// ============================================================
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  return Math.acos(
+    Math.sin(toRad(lat1)) * Math.sin(toRad(lat2)) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1))
+  ) * 6371;
+}
+
+// ============================================================
+// Group places by day
+// ============================================================
+function groupByDay() {
+  const days = {};
+  const totalDays = TRIP_DATA.total_days || 1;
+  for (let d = 1; d <= totalDays; d++) days[d] = [];
+  places.forEach(p => {
+    const d = p.day_number || 'unassigned';
+    if (!days[d]) days[d] = [];
+    days[d].push(p);
+  });
+  Object.values(days).forEach(arr => arr.sort((a, b) => (a.order_in_day || 0) - (b.order_in_day || 0)));
+  return days;
+}
+
+// ============================================================
+// Google Maps nav URL for a day
+// ============================================================
+function dayNavUrl(dayPlaces) {
+  const pts = dayPlaces
+    .filter(p => p.latitude && p.longitude)
+    .map(p => p.google_place_id ? 'place_id:' + p.google_place_id : p.latitude + ',' + p.longitude);
+  if (pts.length === 0) return '';
+  return 'https://www.google.com/maps/dir/' + pts.join('/');
+}
+
+// ============================================================
+// Render sidebar
+// ============================================================
+function renderSidebar() {
+  const days = groupByDay();
+  const container = document.getElementById('sidebar-content');
+  container.innerHTML = '';
+
+  document.getElementById('trip-title').textContent = TRIP_DATA.title || 'Travel Plan';
+  document.getElementById('trip-subtitle').textContent = TRIP_DATA.subtitle || '';
+
+  const sortedKeys = Object.keys(days).sort((a, b) => {
+    if (a === 'unassigned') return 1;
+    if (b === 'unassigned') return -1;
+    return Number(a) - Number(b);
+  });
+
+  sortedKeys.forEach(dayKey => {
+    const dayPlaces = days[dayKey];
+    const isUnassigned = dayKey === 'unassigned';
+    const dayNum = isUnassigned ? null : Number(dayKey);
+    const colorIdx = dayNum ? (dayNum - 1) % DAY_COLORS.length : -1;
+
+    const group = document.createElement('div');
+    group.className = 'day-group';
+    group.style.borderLeftColor = colorIdx >= 0 ? DAY_BORDER[colorIdx] : '#d1d5db';
+    group.style.background = colorIdx >= 0 ? DAY_BG[colorIdx] : '#f9fafb';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'day-group-header';
+
+    const dayInfo = TRIP_DATA.day_labels && TRIP_DATA.day_labels[dayKey];
+    const title = document.createElement('span');
+    title.className = 'day-group-title';
+    title.textContent = isUnassigned ? 'Unassigned' : (dayInfo ? `Day ${dayNum} — ${dayInfo}` : `Day ${dayNum}`);
+    header.appendChild(title);
+
+    if (!isUnassigned && dayPlaces.length > 0) {
+      const navUrl = dayNavUrl(dayPlaces);
+      if (navUrl) {
+        const navLink = document.createElement('a');
+        navLink.className = 'day-nav-link';
+        navLink.href = navUrl;
+        navLink.target = '_blank';
+        navLink.textContent = 'Navigate ↗';
+        header.appendChild(navLink);
+      }
+    }
+    group.appendChild(header);
+
+    // Place list
+    const list = document.createElement('div');
+    list.className = 'place-list';
+    list.dataset.day = dayKey;
+
+    if (dayPlaces.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'place-list-empty';
+      empty.textContent = 'Drag places here';
+      list.appendChild(empty);
+    }
+
+    dayPlaces.forEach((place, idx) => {
+      const card = document.createElement('div');
+      card.className = 'place-card';
+      card.dataset.placeName = place.name;
+
+      let html = '<div class="place-name">';
+      html += `<span>${TYPE_ICONS[place.type] || TYPE_ICONS.other}</span>`;
+      if (place.google_maps_url) {
+        html += `<a href="${place.google_maps_url}" target="_blank" class="place-link" style="font-size:13px;font-weight:600;color:#1f2937;text-decoration:none;">${place.name}</a>`;
+      } else {
+        html += `<span>${place.name}</span>`;
+      }
+      html += `<span class="place-type-badge type-${place.type || 'other'}">${place.type || 'other'}</span>`;
+      html += '</div>';
+
+      if (place.stay_duration) {
+        html += `<div class="place-meta">⏰ ${place.stay_duration}</div>`;
+      }
+      if (place.description) {
+        html += `<div class="place-desc">💡 ${place.description}</div>`;
+      }
+      if (place.tips) {
+        html += `<div class="place-tips">📝 ${place.tips}</div>`;
+      }
+      if (place.google_maps_url) {
+        html += `<a href="${place.google_maps_url}" target="_blank" class="place-link">Google Maps ↗</a>`;
+      }
+
+      // Distance from previous
+      if (idx > 0) {
+        const prev = dayPlaces[idx - 1];
+        if (prev.latitude && prev.longitude && place.latitude && place.longitude) {
+          const dist = haversineKm(prev.latitude, prev.longitude, place.latitude, place.longitude);
+          if (dist > 0) {
+            html += `<div class="place-distance">↕ ${dist.toFixed(1)} km</div>`;
+          }
+        }
+      }
+
+      card.innerHTML = html;
+
+      // Click to focus on map
+      card.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A') return;
+        if (place.latitude && place.longitude) {
+          map.panTo({ lat: place.latitude, lng: place.longitude });
+          map.setZoom(15);
+          showInfoWindow(place);
+        }
+      });
+
+      list.appendChild(card);
+    });
+
+    group.appendChild(list);
+    container.appendChild(group);
+
+    // Init SortableJS
+    new Sortable(list, {
+      group: 'places',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd: function(evt) {
+        updateOrderFromDOM();
+        saveOrder();
+        renderSidebar();
+        renderMap();
+      }
+    });
+  });
+}
+
+// ============================================================
+// Update place order from DOM after drag
+// ============================================================
+function updateOrderFromDOM() {
+  const lists = document.querySelectorAll('.place-list');
+  lists.forEach(list => {
+    const dayKey = list.dataset.day;
+    const cards = list.querySelectorAll('.place-card');
+    cards.forEach((card, idx) => {
+      const name = card.dataset.placeName;
+      const place = places.find(p => p.name === name);
+      if (place) {
+        place.day_number = dayKey === 'unassigned' ? null : Number(dayKey);
+        place.order_in_day = idx + 1;
+      }
+    });
+  });
+}
+
+// ============================================================
+// Render map
+// ============================================================
+function renderMap() {
+  // Clear existing
+  markers.forEach(m => m.setMap(null));
+  polylines.forEach(p => p.setMap(null));
+  markers = [];
+  polylines = [];
+
+  const days = groupByDay();
+  const bounds = new google.maps.LatLngBounds();
+  let hasPoints = false;
+
+  Object.entries(days).forEach(([dayKey, dayPlaces]) => {
+    if (dayKey === 'unassigned') return;
+    const dayNum = Number(dayKey);
+    const color = DAY_COLORS[(dayNum - 1) % DAY_COLORS.length];
+    const path = [];
+
+    dayPlaces.forEach((place, idx) => {
+      if (!place.latitude || !place.longitude) return;
+      const pos = { lat: place.latitude, lng: place.longitude };
+      bounds.extend(pos);
+      hasPoints = true;
+      path.push(pos);
+
+      const marker = new google.maps.Marker({
+        position: pos,
+        map: map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: color,
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        },
+        title: place.name,
+        zIndex: 100 + idx,
+      });
+
+      marker.addListener('click', () => showInfoWindow(place));
+      markers.push(marker);
+    });
+
+    // Polyline
+    if (path.length >= 2) {
+      const polyline = new google.maps.Polyline({
+        path: path,
+        strokeColor: color,
+        strokeWeight: 2,
+        strokeOpacity: 0.8,
+        geodesic: true,
+        map: map,
+      });
+      polylines.push(polyline);
+    }
+  });
+
+  if (hasPoints) map.fitBounds(bounds, 50);
+
+  // Legend
+  renderLegend(days);
+}
+
+function showInfoWindow(place) {
+  if (!place.latitude || !place.longitude) return;
+  const mapsLink = place.google_maps_url
+    ? `<a href="${place.google_maps_url}" target="_blank" style="font-size:12px;color:#2563eb;margin-top:6px;display:inline-block;">Open in Google Maps ↗</a>`
+    : '';
+  infoWindow.setContent(`
+    <div style="padding:4px 8px;max-width:220px;">
+      <div style="font-weight:600;font-size:14px;">${place.name}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px;">
+        ${place.type || ''}${place.day_number ? ' · Day ' + place.day_number : ''}
+      </div>
+      ${place.description ? `<div style="font-size:12px;color:#666;margin-top:4px;">${place.description}</div>` : ''}
+      ${mapsLink}
+    </div>
+  `);
+  infoWindow.setPosition({ lat: place.latitude, lng: place.longitude });
+  infoWindow.open(map);
+}
+
+function renderLegend(days) {
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  const dayNums = Object.keys(days).filter(k => k !== 'unassigned').map(Number).sort((a, b) => a - b);
+  dayNums.forEach(d => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-dot" style="background:${DAY_COLORS[(d-1) % DAY_COLORS.length]}"></span><span style="color:#4b5563;">Day ${d}</span>`;
+    item.addEventListener('click', () => {
+      const dayPlaces = (groupByDay()[d] || []).filter(p => p.latitude && p.longitude);
+      if (dayPlaces.length === 0) return;
+      const bounds = new google.maps.LatLngBounds();
+      dayPlaces.forEach(p => bounds.extend({ lat: p.latitude, lng: p.longitude }));
+      map.fitBounds(bounds, 50);
+    });
+    legend.appendChild(item);
+  });
+}
+
+// ============================================================
+// Init
+// ============================================================
+function init() {
+  loadOrder();
+
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 35.6812, lng: 139.7671 },
+    zoom: 11,
+    gestureHandling: 'greedy',
+    mapTypeControl: false,
+    streetViewControl: false,
+  });
+  infoWindow = new google.maps.InfoWindow();
+
+  renderSidebar();
+  renderMap();
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
