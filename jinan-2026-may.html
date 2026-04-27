@@ -1,454 +1,453 @@
-     1|<!DOCTYPE html>
-     2|<html lang="zh-CN">
-     3|<head>
-     4|  <meta charset="UTF-8">
-     5|  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     6|  <title>🏯 济南泉城 3.5日深度游</title>
-     7|  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-     8|  <script>window._AMapSecurityConfig = { securityJsCode: "6e6712b500353ca09929c47636e68682" };</script>
-     9|  <script src="https://webapi.amap.com/maps?v=2.0&key=6585a0b45f7f2b26cbf10e7f6bd0963e"></script>
-    10|  <style>
-    11|    * { margin: 0; padding: 0; box-sizing: border-box; }
-    12|    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
-    13|
-    14|    #app { display: flex; height: 100vh; }
-    15|
-    16|    /* --- Sidebar --- */
-    17|    #sidebar {
-    18|      width: 400px; min-width: 400px;
-    19|      overflow-y: auto; background: #fff;
-    20|      border-right: 1px solid #e5e7eb;
-    21|      display: flex; flex-direction: column;
-    22|    }
-    23|    #sidebar-header {
-    24|      padding: 16px 20px; border-bottom: 1px solid #e5e7eb;
-    25|      background: #fff; position: sticky; top: 0; z-index: 10;
-    26|    }
-    27|    #sidebar-header h1 { font-size: 18px; font-weight: 700; color: #1f2937; }
-    28|    #sidebar-header p { font-size: 12px; color: #9ca3af; margin-top: 4px; }
-    29|    #sidebar-content { padding: 12px; flex: 1; }
-    30|
-    31|    /* --- Day group --- */
-    32|    .day-group {
-    33|      border-left: 4px solid #ccc;
-    34|      border-radius: 8px; padding: 12px;
-    35|      margin-bottom: 12px; background: #fafafa;
-    36|    }
-    37|    .day-group-header {
-    38|      display: flex; justify-content: space-between; align-items: center;
-    39|      margin-bottom: 8px;
-    40|    }
-    41|    .day-group-title { font-size: 14px; font-weight: 700; color: #374151; }
-    42|    .day-nav-link {
-    43|      font-size: 11px; color: #3b82f6; text-decoration: none;
-    44|      padding: 2px 8px; border: 1px solid #3b82f6; border-radius: 4px;
-    45|    }
-    46|    .day-nav-link:hover { background: #3b82f6; color: #fff; }
-    47|
-    48|    .place-list { min-height: 40px; }
-    49|    .place-list-empty { text-align: center; color: #9ca3af; font-size: 12px; padding: 12px 0; }
-    50|
-    51|    /* --- Place card --- */
-    52|    .place-card {
-    53|      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
-    54|      padding: 10px 12px; margin-bottom: 6px; cursor: grab;
-    55|      transition: box-shadow 0.15s, transform 0.15s;
-    56|    }
-    57|    .place-card:hover { border-color: #93c5fd; }
-    58|    .place-card.sortable-ghost { opacity: 0.4; }
-    59|    .place-card.sortable-chosen { box-shadow: 0 8px 25px rgba(0,0,0,0.15); transform: scale(1.02); }
-    60|
-    61|    .place-name {
-    62|      font-size: 13px; font-weight: 600; color: #1f2937;
-    63|      display: flex; align-items: center; gap: 6px;
-    64|    }
-    65|    .place-type-badge {
-    66|      font-size: 10px; padding: 1px 6px; border-radius: 9999px;
-    67|      font-weight: 500;
-    68|    }
-    69|    .type-attraction { background: #dbeafe; color: #1d4ed8; }
-    70|    .type-restaurant { background: #fef3c7; color: #92400e; }
-    71|    .type-shopping { background: #fce7f3; color: #9d174d; }
-    72|    .type-hotel { background: #e0e7ff; color: #4338ca; }
-    73|    .type-other { background: #f3f4f6; color: #6b7280; }
-    74|
-    75|    .place-meta { font-size: 11px; color: #6b7280; margin-top: 4px; }
-    76|    .place-desc { font-size: 12px; color: #4b5563; margin-top: 4px; }
-    77|    .place-tips { font-size: 11px; color: #9ca3af; margin-top: 2px; }
-    78|    .place-link {
-    79|      font-size: 11px; color: #3b82f6; text-decoration: none; margin-top: 4px;
-    80|      display: inline-block;
-    81|    }
-    82|    .place-link:hover { color: #1d4ed8; }
-    83|    .place-distance {
-    84|      font-size: 11px; color: #3b82f6; margin-top: 2px;
-    85|    }
-    86|
-    87|    /* --- Map --- */
-    88|    #map-container { flex: 1; position: relative; }
-    89|    #map { width: 100%; height: 100%; }
-    90|
-    91|    /* --- Legend --- */
-    92|    #legend {
-    93|      position: absolute; bottom: 12px; left: 12px;
-    94|      background: rgba(255,255,255,0.92); border-radius: 8px;
-    95|      padding: 8px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-    96|      display: flex; gap: 12px; font-size: 12px; z-index: 5;
-    97|    }
-    98|    .legend-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
-    99|    .legend-item:hover { opacity: 0.7; }
-   100|    .legend-dot {
-   101|      width: 12px; height: 12px; border-radius: 50%;
-   102|      border: 2px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3);
-   103|    }
-   104|
-   105|    /* --- Mobile --- */
-   106|    @media (max-width: 768px) {
-   107|      #app { flex-direction: column; }
-   108|      #sidebar { width: 100%; min-width: unset; height: 50vh; border-right: none; border-bottom: 1px solid #e5e7eb; }
-   109|      #map-container { height: 50vh; }
-   110|    }
-   111|  </style>
-   112|</head>
-   113|<body>
-   114|<div id="app">
-   115|  <div id="sidebar">
-   116|    <div id="sidebar-header">
-   117|      <h1 id="trip-title"></h1>
-   118|      <p id="trip-subtitle"></p>
-   119|    </div>
-   120|    <div id="sidebar-content"></div>
-   121|  </div>
-   122|  <div id="map-container">
-   123|    <div id="map"></div>
-   124|    <div id="legend"></div>
-   125|  </div>
-   126|</div>
-   127|
-   128|<script>
-   129|const TRIP_DATA = {"id": "jinan-2026-may", "title": "🏯 济南泉城 3.5日深度游", "subtitle": "2026年5月2-5日 · 两人出游 · 景点+美食 · 充实节奏", "total_days": 4, "day_labels": {"1": "5/2 泉城精华·趵突泉&大明湖", "2": "5/3 山景文化·千佛山&省博", "3": "5/4 泉水深度·黑虎泉&游船", "4": "5/5 晨光告别·泉城广场"}, "places": [{"name": "趵突泉公园", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 1, "time_slot": "morning", "description": "天下第一泉，济南灵魂。观澜亭看三股泉水翻涌，李清照纪念堂也在园内", "tips": "⚠️需预约！公众号'天下第一泉'或美团，门票40元，建议早上8点入园", "stay_duration": "2-2.5小时", "latitude": 36.661087, "longitude": 117.015893, "amap_url": "https://uri.amap.com/marker?position=117.015893,36.661087&name=%E8%B6%B5%E7%AA%81%E6%B3%89%E5%85%AC%E5%9B%AD&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "草包包子铺(普利街总店)", "city": "济南", "type": "restaurant", "day_number": 1, "order_in_day": 2, "time_slot": "noon", "description": "济南老字号，灌汤包皮薄馅大汁多", "tips": "人均25-35元，11点前到避开排队", "stay_duration": "1小时", "latitude": 36.664265, "longitude": 117.011393, "amap_url": "https://uri.amap.com/marker?position=117.011393,36.664265&name=%E8%8D%89%E5%8C%85%E5%8C%85%E5%AD%90%E9%93%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "五龙潭公园", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 3, "time_slot": "afternoon", "description": "免门票！秦琼故居，泉群密集", "tips": "免费开放", "stay_duration": "1小时", "latitude": 36.665992, "longitude": 117.014637, "amap_url": "https://uri.amap.com/marker?position=117.014637,36.665992&name=%E4%BA%94%E9%BE%99%E6%BD%AD%E5%85%AC%E5%9B%AD&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "大明湖景区", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 4, "time_slot": "afternoon", "description": "四面荷花三面柳，一城山色半城湖。超然楼傍晚登楼看日落绝美", "tips": "⚠️超然楼需单独预约！公众号'天下第一泉'，门票40元", "stay_duration": "2.5-3小时", "latitude": 36.672584, "longitude": 117.016718, "amap_url": "https://uri.amap.com/marker?position=117.016718,36.672584&name=%E5%A4%A7%E6%98%8E%E6%B9%96%E6%99%AF%E5%8C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "芙蓉街", "city": "济南", "type": "shopping", "day_number": 1, "order_in_day": 5, "time_slot": "evening", "description": "小吃一条街：油旋、甜沫、烤串，五一人多但必须体验", "tips": "紧邻曲水亭街，拍照散步好去处", "stay_duration": "1小时", "latitude": 36.666999, "longitude": 117.023781, "amap_url": "https://uri.amap.com/marker?position=117.023781,36.666999&name=%E8%8A%99%E8%93%89%E8%A1%97&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "曲水亭街", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 6, "time_slot": "evening", "description": "家家泉水户户垂杨，老济南氛围感拉满", "tips": "适合傍晚散步拍照", "stay_duration": "1小时", "latitude": 36.670581, "longitude": 117.024334, "amap_url": "https://uri.amap.com/marker?position=117.024334,36.670581&name=%E6%9B%B2%E6%B0%B4%E4%BA%AD%E8%A1%97&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "千佛山风景名胜区", "city": "济南", "type": "attraction", "day_number": 2, "order_in_day": 1, "time_slot": "morning", "description": "济南三大名胜之一，登顶俯瞰泉城。兴国禅寺、万佛洞", "tips": "⚠️需预约！公众号'千佛山风景名胜区'或美团，门票30元，索道上步行下", "stay_duration": "3小时", "latitude": 36.639288, "longitude": 117.036098, "amap_url": "https://uri.amap.com/marker?position=117.036098,36.639288&name=%E5%8D%83%E4%BD%9B%E5%B1%B1%E9%A3%8E%E6%99%AF%E5%90%8D%E8%83%9C%E5%8C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "燕喜堂", "city": "济南", "type": "restaurant", "day_number": 2, "order_in_day": 2, "time_slot": "noon", "description": "正宗鲁菜：九转大肠、糖醋鲤鱼、爆炒腰花", "tips": "人均80-120元", "stay_duration": "1.5小时", "latitude": 36.667795, "longitude": 117.105751, "amap_url": "https://uri.amap.com/marker?position=117.105751,36.667795&name=%E7%87%95%E5%96%9C%E5%A0%82&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "山东博物馆", "city": "济南", "type": "attraction", "day_number": 2, "order_in_day": 3, "time_slot": "afternoon", "description": "国家一级博物馆，镇馆之宝：红陶兽形壶、鲁国大玉璧、蛋壳黑陶杯", "tips": "⚠️必须预约！公众号'山东博物馆'，免费，周一闭馆", "stay_duration": "2.5-3小时", "latitude": 36.658157, "longitude": 117.095731, "amap_url": "https://uri.amap.com/marker?position=117.095731,36.658157&name=%E5%B1%B1%E4%B8%9C%E5%8D%9A%E7%89%A9%E9%A6%86&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "洪家楼天主教堂", "city": "济南", "type": "attraction", "day_number": 2, "order_in_day": 4, "time_slot": "afternoon", "description": "哥特式建筑，全国三大天主教堂之一，很出片", "tips": "⚠️需确认是否开放参观，有时不对外开放", "stay_duration": "40分钟", "latitude": 36.686232, "longitude": 117.065923, "amap_url": "https://uri.amap.com/marker?position=117.065923,36.686232&name=%E6%B4%AA%E5%AE%B6%E6%A5%BC%E5%A4%A9%E4%B8%BB%E6%95%99%E5%A0%82&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "宽厚里", "city": "济南", "type": "shopping", "day_number": 2, "order_in_day": 5, "time_slot": "evening", "description": "济南版宽窄巷子，网红店聚集，夜景好看", "tips": "把子肉、鲜馅水饺、烧烤，边逛边吃", "stay_duration": "2小时", "latitude": 36.663559, "longitude": 117.030905, "amap_url": "https://uri.amap.com/marker?position=117.030905,36.663559&name=%E5%AE%BD%E5%8E%9A%E9%87%8C&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "黑虎泉", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 1, "time_slot": "morning", "description": "三个虎头喷泉气势磅礴！居民在这打泉水喝，烟火气十足", "tips": "免费，清晨最美，可以接泉水尝一口", "stay_duration": "1.5小时", "latitude": 36.662414, "longitude": 117.033525, "amap_url": "https://uri.amap.com/marker?position=117.033525,36.662414&name=%E9%BB%91%E8%99%8E%E6%B3%89&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "解放阁", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 2, "time_slot": "morning", "description": "纪念济南解放的标志性建筑，登阁眺望黑虎泉和护城河全景", "tips": "免费参观", "stay_duration": "30分钟", "latitude": 36.663178, "longitude": 117.033627, "amap_url": "https://uri.amap.com/marker?position=117.033627,36.663178&name=%E8%A7%A3%E6%94%BE%E9%98%81&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "超意兴(大观园店)", "city": "济南", "type": "restaurant", "day_number": 3, "order_in_day": 3, "time_slot": "noon", "description": "济南灵魂快餐！把子肉+米饭+四季豆，便宜大碗绝对正宗", "tips": "人均15-20元，体验地道济南人日常", "stay_duration": "30分钟", "latitude": 36.660864, "longitude": 116.996505, "amap_url": "https://uri.amap.com/marker?position=116.996505,36.660864&name=%E8%B6%85%E6%84%8F%E5%85%B4&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "百花洲历史文化街区", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 4, "time_slot": "afternoon", "description": "古建筑群+民俗展览+手工艺品，泉水人家原生态体验", "tips": "免费，紧邻大明湖", "stay_duration": "1.5小时", "latitude": 36.669214, "longitude": 117.024493, "amap_url": "https://uri.amap.com/marker?position=117.024493,36.669214&name=%E7%99%BE%E8%8A%B1%E6%B4%B2%E5%8E%86%E5%8F%B2%E6%96%87%E5%8C%96%E8%A1%97%E5%8C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "护城河游船", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 5, "time_slot": "afternoon", "description": "从黑虎泉到趵突泉，水上看泉城别有一番风味", "tips": "约100元/人，全程约1小时", "stay_duration": "1小时", "latitude": 36.662464, "longitude": 117.032243, "amap_url": "https://uri.amap.com/marker?position=117.032243,36.662464&name=%E6%8A%A4%E5%9F%8E%E6%B2%B3%E6%B8%B8%E8%88%B9&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "舜耕路美食街", "city": "济南", "type": "restaurant", "day_number": 3, "order_in_day": 6, "time_slot": "evening", "description": "济南烧烤不输淄博！烤羊腰、烤大虾、烤馒头片", "tips": "人均60-100元，配趵突泉啤酒🍺", "stay_duration": "2小时", "latitude": 36.624775, "longitude": 117.018425, "amap_url": "https://uri.amap.com/marker?position=117.018425,36.624775&name=%E8%88%9C%E8%80%95%E8%B7%AF%E7%BE%8E%E9%A3%9F%E8%A1%97&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "泉城广场", "city": "济南", "type": "attraction", "day_number": 4, "order_in_day": 1, "time_slot": "morning", "description": "泉标雕塑打卡，清晨泉城广场很清爽，给旅程画句号", "tips": "预留2小时去机场，打车约40分钟", "stay_duration": "30-40分钟", "latitude": 36.661373, "longitude": 117.022086, "amap_url": "https://uri.amap.com/marker?position=117.022086,36.661373&name=%E6%B3%89%E5%9F%8E%E5%B9%BF%E5%9C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}]};
-   130|
-   131|const DAY_COLORS = ['#ef4444','#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#6366f1'];
-   132|const DAY_BG     = ['#fef2f2','#eff6ff','#f0fdf4','#fefce8','#faf5ff','#fdf2f8','#eef2ff'];
-   133|const DAY_BORDER = ['#f87171','#60a5fa','#4ade80','#facc15','#c084fc','#f472b6','#818cf8'];
-   134|const TYPE_ICONS = { attraction: '🏛️', restaurant: '🍜', shopping: '🛍️', hotel: '🏨', other: '📍' };
-   135|
-   136|const STORAGE_KEY = 'travel-plan-order-' + (TRIP_DATA.id || document.title);
-   137|
-   138|let places = TRIP_DATA.places || [];
-   139|let map, infoWindow;
-   140|let markers = [];
-   141|let polylines = [];
-   142|
-   143|function saveOrder() {
-   144|  const order = {};
-   145|  places.forEach(p => { order[p.name] = { day_number: p.day_number, order_in_day: p.order_in_day }; });
-   146|  localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
-   147|}
-   148|
-   149|function loadOrder() {
-   150|  try {
-   151|    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-   152|    if (!saved) return;
-   153|    places.forEach(p => {
-   154|      if (saved[p.name]) {
-   155|        p.day_number = saved[p.name].day_number;
-   156|        p.order_in_day = saved[p.name].order_in_day;
-   157|      }
-   158|    });
-   159|  } catch {}
-   160|}
-   161|
-   162|function haversineKm(lat1, lon1, lat2, lon2) {
-   163|  const toRad = d => d * Math.PI / 180;
-   164|  return Math.acos(
-   165|    Math.sin(toRad(lat1)) * Math.sin(toRad(lat2)) +
-   166|    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1))
-   167|  ) * 6371;
-   168|}
-   169|
-   170|function groupByDay() {
-   171|  const days = {};
-   172|  const totalDays = TRIP_DATA.total_days || 1;
-   173|  for (let d = 1; d <= totalDays; d++) days[d] = [];
-   174|  places.forEach(p => {
-   175|    const d = p.day_number || 'unassigned';
-   176|    if (!days[d]) days[d] = [];
-   177|    days[d].push(p);
-   178|  });
-   179|  Object.values(days).forEach(arr => arr.sort((a, b) => (a.order_in_day || 0) - (b.order_in_day || 0)));
-   180|  return days;
-   181|}
-   182|
-   183|function getMapUrl(place) {
-   184|  return place.amap_url || place.google_maps_url || '';
-   185|}
-   186|
-   187|function dayNavUrl(dayPlaces) {
-   188|  const pts = dayPlaces.filter(p => p.latitude && p.longitude);
-   189|  if (pts.length === 0) return '';
-   190|  const origin = pts[0];
-   191|  const dest = pts[pts.length - 1];
-   192|  const mid = pts.slice(1, -1).map(p => `${p.longitude},${p.latitude}`).join(';');
-   193|  let url = `https://uri.amap.com/navigation?from=${origin.longitude},${origin.latitude},${encodeURIComponent(origin.name)}&to=${dest.longitude},${dest.latitude},${encodeURIComponent(dest.name)}&mode=bus&coordinate=gaode`;
-   194|  if (mid) url += `&via=${mid}`;
-   195|  return url;
-   196|}
-   197|
-   198|function renderSidebar() {
-   199|  const days = groupByDay();
-   200|  const container = document.getElementById('sidebar-content');
-   201|  container.innerHTML = '';
-   202|
-   203|  document.getElementById('trip-title').textContent = TRIP_DATA.title || 'Travel Plan';
-   204|  document.getElementById('trip-subtitle').textContent = TRIP_DATA.subtitle || '';
-   205|
-   206|  const sortedKeys = Object.keys(days).sort((a, b) => {
-   207|    if (a === 'unassigned') return 1;
-   208|    if (b === 'unassigned') return -1;
-   209|    return Number(a) - Number(b);
-   210|  });
-   211|
-   212|  sortedKeys.forEach(dayKey => {
-   213|    const dayPlaces = days[dayKey];
-   214|    const isUnassigned = dayKey === 'unassigned';
-   215|    const dayNum = isUnassigned ? null : Number(dayKey);
-   216|    const colorIdx = dayNum ? (dayNum - 1) % DAY_COLORS.length : -1;
-   217|
-   218|    const group = document.createElement('div');
-   219|    group.className = 'day-group';
-   220|    group.style.borderLeftColor = colorIdx >= 0 ? DAY_BORDER[colorIdx] : '#d1d5db';
-   221|    group.style.background = colorIdx >= 0 ? DAY_BG[colorIdx] : '#f9fafb';
-   222|
-   223|    const header = document.createElement('div');
-   224|    header.className = 'day-group-header';
-   225|
-   226|    const dayInfo = TRIP_DATA.day_labels && TRIP_DATA.day_labels[dayKey];
-   227|    const title = document.createElement('span');
-   228|    title.className = 'day-group-title';
-   229|    title.textContent = isUnassigned ? '未分配' : (dayInfo ? `第 ${dayNum} 天 — ${dayInfo}` : `第 ${dayNum} 天`);
-   230|    header.appendChild(title);
-   231|
-   232|    if (!isUnassigned && dayPlaces.length > 0) {
-   233|      const navUrl = dayNavUrl(dayPlaces);
-   234|      if (navUrl) {
-   235|        const navLink = document.createElement('a');
-   236|        navLink.className = 'day-nav-link';
-   237|        navLink.href = navUrl;
-   238|        navLink.target = '_blank';
-   239|        navLink.textContent = '导航 ↗';
-   240|        header.appendChild(navLink);
-   241|      }
-   242|    }
-   243|    group.appendChild(header);
-   244|
-   245|    const list = document.createElement('div');
-   246|    list.className = 'place-list';
-   247|    list.dataset.day = dayKey;
-   248|
-   249|    if (dayPlaces.length === 0) {
-   250|      const empty = document.createElement('div');
-   251|      empty.className = 'place-list-empty';
-   252|      empty.textContent = '拖拽地点到这里';
-   253|      list.appendChild(empty);
-   254|    }
-   255|
-   256|    dayPlaces.forEach((place, idx) => {
-   257|      const card = document.createElement('div');
-   258|      card.className = 'place-card';
-   259|      card.dataset.placeName = place.name;
-   260|
-   261|      const mapUrl = getMapUrl(place);
-   262|      let html = '<div class="place-name">';
-   263|      html += `<span>${TYPE_ICONS[place.type] || TYPE_ICONS.other}</span>`;
-   264|      if (mapUrl) {
-   265|        html += `<a href="${mapUrl}" target="_blank" class="place-link" style="font-size:13px;font-weight:600;color:#1f2937;text-decoration:none;">${place.name}</a>`;
-   266|      } else {
-   267|        html += `<span>${place.name}</span>`;
-   268|      }
-   269|      html += `<span class="place-type-badge type-${place.type || 'other'}">${place.type || 'other'}</span>`;
-   270|      html += '</div>';
-   271|
-   272|      if (place.stay_duration) html += `<div class="place-meta">⏰ ${place.stay_duration}</div>`;
-   273|      if (place.description) html += `<div class="place-desc">💡 ${place.description}</div>`;
-   274|      if (place.tips) html += `<div class="place-tips">📝 ${place.tips}</div>`;
-   275|      if (mapUrl) html += `<a href="${mapUrl}" target="_blank" class="place-link">高德地图 ↗</a>`;
-   276|
-   277|      if (idx > 0) {
-   278|        const prev = dayPlaces[idx - 1];
-   279|        if (prev.latitude && prev.longitude && place.latitude && place.longitude) {
-   280|          const dist = haversineKm(prev.latitude, prev.longitude, place.latitude, place.longitude);
-   281|          if (dist > 0) html += `<div class="place-distance">↕ ${dist.toFixed(1)} km</div>`;
-   282|        }
-   283|      }
-   284|
-   285|      card.innerHTML = html;
-   286|      card.addEventListener('click', (e) => {
-   287|        if (e.target.tagName === 'A') return;
-   288|        if (place.latitude && place.longitude) {
-   289|          map.setCenter([place.longitude, place.latitude]);
-   290|          map.setZoom(15);
-   291|          showInfoWindow(place);
-   292|        }
-   293|      });
-   294|      list.appendChild(card);
-   295|    });
-   296|
-   297|    group.appendChild(list);
-   298|    container.appendChild(group);
-   299|
-   300|    new Sortable(list, {
-   301|      group: 'places',
-   302|      animation: 150,
-   303|      ghostClass: 'sortable-ghost',
-   304|      chosenClass: 'sortable-chosen',
-   305|      onEnd: function() {
-   306|        updateOrderFromDOM();
-   307|        saveOrder();
-   308|        renderSidebar();
-   309|        renderMap();
-   310|      }
-   311|    });
-   312|  });
-   313|}
-   314|
-   315|function updateOrderFromDOM() {
-   316|  const lists = document.querySelectorAll('.place-list');
-   317|  lists.forEach(list => {
-   318|    const dayKey = list.dataset.day;
-   319|    const cards = list.querySelectorAll('.place-card');
-   320|    cards.forEach((card, idx) => {
-   321|      const name = card.dataset.placeName;
-   322|      const place = places.find(p => p.name === name);
-   323|      if (place) {
-   324|        place.day_number = dayKey === 'unassigned' ? null : Number(dayKey);
-   325|        place.order_in_day = idx + 1;
-   326|      }
-   327|    });
-   328|  });
-   329|}
-   330|
-   331|function renderMap() {
-   332|  markers.forEach(m => map.remove(m));
-   333|  polylines.forEach(p => map.remove(p));
-   334|  markers = [];
-   335|  polylines = [];
-   336|
-   337|  const days = groupByDay();
-   338|  const allMarkers = [];
-   339|
-   340|  Object.entries(days).forEach(([dayKey, dayPlaces]) => {
-   341|    if (dayKey === 'unassigned') return;
-   342|    const dayNum = Number(dayKey);
-   343|    const color = DAY_COLORS[(dayNum - 1) % DAY_COLORS.length];
-   344|    const path = [];
-   345|
-   346|    dayPlaces.forEach((place, idx) => {
-   347|      if (!place.latitude || !place.longitude) return;
-   348|      const pos = [place.longitude, place.latitude];
-   349|      path.push(pos);
-   350|
-   351|      const marker = new AMap.Marker({
-   352|        position: pos,
-   353|        content: `<div style="background:${color};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);">${idx + 1}</div>`,
-   354|        offset: new AMap.Pixel(-12, -12),
-   355|        title: place.name,
-   356|      });
-   357|      marker.on('click', () => showInfoWindow(place));
-   358|      map.add(marker);
-   359|      markers.push(marker);
-   360|      allMarkers.push(marker);
-   361|    });
-   362|
-   363|    if (path.length >= 2) {
-   364|      const polyline = new AMap.Polyline({
-   365|        path: path,
-   366|        strokeColor: color,
-   367|        strokeWeight: 3,
-   368|        strokeOpacity: 0.8,
-   369|      });
-   370|      map.add(polyline);
-   371|      polylines.push(polyline);
-   372|    }
-   373|  });
-   374|
-   375|  if (allMarkers.length > 0) map.setFitView(allMarkers, false, [50, 50, 50, 50]);
-   376|
-   377|  renderLegend(days);
-   378|}
-   379|
-   380|function showInfoWindow(place) {
-   381|  if (!place.latitude || !place.longitude) return;
-   382|  const mapUrl = getMapUrl(place);
-   383|  const mapsLink = mapUrl
-   384|    ? `<a href="${mapUrl}" target="_blank" style="font-size:12px;color:#2563eb;margin-top:6px;display:inline-block;">在高德地图中打开 ↗</a>`
-   385|    : '';
-   386|  if (infoWindow) infoWindow.close();
-   387|  infoWindow = new AMap.InfoWindow({
-   388|    content: `
-   389|      <div style="padding:4px 8px;max-width:220px;">
-   390|        <div style="font-weight:600;font-size:14px;">${place.name}</div>
-   391|        <div style="font-size:12px;color:#888;margin-top:2px;">
-   392|          ${place.type || ''}${place.day_number ? ' · 第 ' + place.day_number + ' 天' : ''}
-   393|        </div>
-   394|        ${place.description ? `<div style="font-size:12px;color:#666;margin-top:4px;">${place.description}</div>` : ''}
-   395|        ${mapsLink}
-   396|      </div>
-   397|    `,
-   398|    offset: new AMap.Pixel(0, -12),
-   399|  });
-   400|  infoWindow.open(map, [place.longitude, place.latitude]);
-   401|}
-   402|
-   403|function renderLegend(days) {
-   404|  const legend = document.getElementById('legend');
-   405|  legend.innerHTML = '';
-   406|  const dayNums = Object.keys(days).filter(k => k !== 'unassigned').map(Number).sort((a, b) => a - b);
-   407|  dayNums.forEach(d => {
-   408|    const item = document.createElement('div');
-   409|    item.className = 'legend-item';
-   410|    item.innerHTML = `<span class="legend-dot" style="background:${DAY_COLORS[(d-1) % DAY_COLORS.length]}"></span><span style="color:#4b5563;">第 ${d} 天</span>`;
-   411|    item.addEventListener('click', () => {
-   412|      const dayPlaces = (groupByDay()[d] || []).filter(p => p.latitude && p.longitude);
-   413|      if (dayPlaces.length === 0) return;
-   414|      const dayMarkers = markers.filter((m, i) => {
-   415|        const allDayIdxs = [];
-   416|        let offset = 0;
-   417|        const days2 = groupByDay();
-   418|        for (const [dk, dp] of Object.entries(days2)) {
-   419|          if (dk === 'unassigned') continue;
-   420|          const valid = dp.filter(p => p.latitude && p.longitude);
-   421|          if (Number(dk) === d) {
-   422|            for (let j = 0; j < valid.length; j++) allDayIdxs.push(offset + j);
-   423|          }
-   424|          offset += valid.length;
-   425|        }
-   426|        return allDayIdxs.includes(i);
-   427|      });
-   428|      if (dayMarkers.length > 0) map.setFitView(dayMarkers, false, [50, 50, 50, 50]);
-   429|    });
-   430|    legend.appendChild(item);
-   431|  });
-   432|}
-   433|
-   434|function init() {
-   435|  loadOrder();
-   436|
-   437|  const firstPlace = places.find(p => p.latitude && p.longitude);
-   438|  const center = firstPlace ? [firstPlace.longitude, firstPlace.latitude] : [116.397428, 39.90923];
-   439|
-   440|  map = new AMap.Map('map', {
-   441|    center: center,
-   442|    zoom: 11,
-   443|    mapStyle: 'amap://styles/normal',
-   444|  });
-   445|
-   446|  renderSidebar();
-   447|  renderMap();
-   448|}
-   449|
-   450|window.addEventListener('load', init);
-   451|</script>
-   452|</body>
-   453|</html>
-   454|
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏯 济南泉城 3.5日深度游</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script>window._AMapSecurityConfig = { securityJsCode: "6e6712b500353ca09929c47636e68682" };</script>
+  <script src="https://webapi.amap.com/maps?v=2.0&key=6585a0b45f7f2b26cbf10e7f6bd0963e"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+
+    #app { display: flex; height: 100vh; }
+
+    /* --- Sidebar --- */
+    #sidebar {
+      width: 400px; min-width: 400px;
+      overflow-y: auto; background: #fff;
+      border-right: 1px solid #e5e7eb;
+      display: flex; flex-direction: column;
+    }
+    #sidebar-header {
+      padding: 16px 20px; border-bottom: 1px solid #e5e7eb;
+      background: #fff; position: sticky; top: 0; z-index: 10;
+    }
+    #sidebar-header h1 { font-size: 18px; font-weight: 700; color: #1f2937; }
+    #sidebar-header p { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+    #sidebar-content { padding: 12px; flex: 1; }
+
+    /* --- Day group --- */
+    .day-group {
+      border-left: 4px solid #ccc;
+      border-radius: 8px; padding: 12px;
+      margin-bottom: 12px; background: #fafafa;
+    }
+    .day-group-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .day-group-title { font-size: 14px; font-weight: 700; color: #374151; }
+    .day-nav-link {
+      font-size: 11px; color: #3b82f6; text-decoration: none;
+      padding: 2px 8px; border: 1px solid #3b82f6; border-radius: 4px;
+    }
+    .day-nav-link:hover { background: #3b82f6; color: #fff; }
+
+    .place-list { min-height: 40px; }
+    .place-list-empty { text-align: center; color: #9ca3af; font-size: 12px; padding: 12px 0; }
+
+    /* --- Place card --- */
+    .place-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 6px; cursor: grab;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .place-card:hover { border-color: #93c5fd; }
+    .place-card.sortable-ghost { opacity: 0.4; }
+    .place-card.sortable-chosen { box-shadow: 0 8px 25px rgba(0,0,0,0.15); transform: scale(1.02); }
+
+    .place-name {
+      font-size: 13px; font-weight: 600; color: #1f2937;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .place-type-badge {
+      font-size: 10px; padding: 1px 6px; border-radius: 9999px;
+      font-weight: 500;
+    }
+    .type-attraction { background: #dbeafe; color: #1d4ed8; }
+    .type-restaurant { background: #fef3c7; color: #92400e; }
+    .type-shopping { background: #fce7f3; color: #9d174d; }
+    .type-hotel { background: #e0e7ff; color: #4338ca; }
+    .type-other { background: #f3f4f6; color: #6b7280; }
+
+    .place-meta { font-size: 11px; color: #6b7280; margin-top: 4px; }
+    .place-desc { font-size: 12px; color: #4b5563; margin-top: 4px; }
+    .place-tips { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .place-link {
+      font-size: 11px; color: #3b82f6; text-decoration: none; margin-top: 4px;
+      display: inline-block;
+    }
+    .place-link:hover { color: #1d4ed8; }
+    .place-distance {
+      font-size: 11px; color: #3b82f6; margin-top: 2px;
+    }
+
+    /* --- Map --- */
+    #map-container { flex: 1; position: relative; }
+    #map { width: 100%; height: 100%; }
+
+    /* --- Legend --- */
+    #legend {
+      position: absolute; bottom: 12px; left: 12px;
+      background: rgba(255,255,255,0.92); border-radius: 8px;
+      padding: 8px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      display: flex; gap: 12px; font-size: 12px; z-index: 5;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .legend-item:hover { opacity: 0.7; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3);
+    }
+
+    /* --- Mobile --- */
+    @media (max-width: 768px) {
+      #app { flex-direction: column; }
+      #sidebar { width: 100%; min-width: unset; height: 50vh; border-right: none; border-bottom: 1px solid #e5e7eb; }
+      #map-container { height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h1 id="trip-title"></h1>
+      <p id="trip-subtitle"></p>
+    </div>
+    <div id="sidebar-content"></div>
+  </div>
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="legend"></div>
+  </div>
+</div>
+
+<script>
+const TRIP_DATA = {"id": "jinan-2026-may", "title": "🏯 济南泉城 3.5日深度游", "subtitle": "2026年5月2-5日 · 两人出游 · 景点+美食 · 充实节奏", "total_days": 4, "day_labels": {"1": "5/2 泉城精华·趵突泉&大明湖", "2": "5/3 山景文化·千佛山&省博", "3": "5/4 泉水深度·黑虎泉&游船", "4": "5/5 晨光告别·泉城广场"}, "places": [{"name": "趵突泉公园", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 1, "time_slot": "morning", "description": "天下第一泉，济南灵魂。观澜亭看三股泉水翻涌，李清照纪念堂也在园内", "tips": "⚠️需预约！公众号'天下第一泉'或美团，门票40元，建议早上8点入园", "stay_duration": "2-2.5小时", "latitude": 36.661087, "longitude": 117.015893, "amap_url": "https://uri.amap.com/marker?position=117.015893,36.661087&name=%E8%B6%B5%E7%AA%81%E6%B3%89%E5%85%AC%E5%9B%AD&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "草包包子铺(普利街总店)", "city": "济南", "type": "restaurant", "day_number": 1, "order_in_day": 2, "time_slot": "noon", "description": "济南老字号，灌汤包皮薄馅大汁多", "tips": "人均25-35元，11点前到避开排队", "stay_duration": "1小时", "latitude": 36.664265, "longitude": 117.011393, "amap_url": "https://uri.amap.com/marker?position=117.011393,36.664265&name=%E8%8D%89%E5%8C%85%E5%8C%85%E5%AD%90%E9%93%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "五龙潭公园", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 3, "time_slot": "afternoon", "description": "免门票！秦琼故居，泉群密集", "tips": "免费开放", "stay_duration": "1小时", "latitude": 36.665992, "longitude": 117.014637, "amap_url": "https://uri.amap.com/marker?position=117.014637,36.665992&name=%E4%BA%94%E9%BE%99%E6%BD%AD%E5%85%AC%E5%9B%AD&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "大明湖景区", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 4, "time_slot": "afternoon", "description": "四面荷花三面柳，一城山色半城湖。超然楼傍晚登楼看日落绝美", "tips": "⚠️超然楼需单独预约！公众号'天下第一泉'，门票40元", "stay_duration": "2.5-3小时", "latitude": 36.672584, "longitude": 117.016718, "amap_url": "https://uri.amap.com/marker?position=117.016718,36.672584&name=%E5%A4%A7%E6%98%8E%E6%B9%96%E6%99%AF%E5%8C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "芙蓉街", "city": "济南", "type": "shopping", "day_number": 1, "order_in_day": 5, "time_slot": "evening", "description": "小吃一条街：油旋、甜沫、烤串，五一人多但必须体验", "tips": "紧邻曲水亭街，拍照散步好去处", "stay_duration": "1小时", "latitude": 36.666999, "longitude": 117.023781, "amap_url": "https://uri.amap.com/marker?position=117.023781,36.666999&name=%E8%8A%99%E8%93%89%E8%A1%97&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "曲水亭街", "city": "济南", "type": "attraction", "day_number": 1, "order_in_day": 6, "time_slot": "evening", "description": "家家泉水户户垂杨，老济南氛围感拉满", "tips": "适合傍晚散步拍照", "stay_duration": "1小时", "latitude": 36.670581, "longitude": 117.024334, "amap_url": "https://uri.amap.com/marker?position=117.024334,36.670581&name=%E6%9B%B2%E6%B0%B4%E4%BA%AD%E8%A1%97&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "千佛山风景名胜区", "city": "济南", "type": "attraction", "day_number": 2, "order_in_day": 1, "time_slot": "morning", "description": "济南三大名胜之一，登顶俯瞰泉城。兴国禅寺、万佛洞", "tips": "⚠️需预约！公众号'千佛山风景名胜区'或美团，门票30元，索道上步行下", "stay_duration": "3小时", "latitude": 36.639288, "longitude": 117.036098, "amap_url": "https://uri.amap.com/marker?position=117.036098,36.639288&name=%E5%8D%83%E4%BD%9B%E5%B1%B1%E9%A3%8E%E6%99%AF%E5%90%8D%E8%83%9C%E5%8C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "燕喜堂", "city": "济南", "type": "restaurant", "day_number": 2, "order_in_day": 2, "time_slot": "noon", "description": "正宗鲁菜：九转大肠、糖醋鲤鱼、爆炒腰花", "tips": "人均80-120元", "stay_duration": "1.5小时", "latitude": 36.667795, "longitude": 117.105751, "amap_url": "https://uri.amap.com/marker?position=117.105751,36.667795&name=%E7%87%95%E5%96%9C%E5%A0%82&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "山东博物馆", "city": "济南", "type": "attraction", "day_number": 2, "order_in_day": 3, "time_slot": "afternoon", "description": "国家一级博物馆，镇馆之宝：红陶兽形壶、鲁国大玉璧、蛋壳黑陶杯", "tips": "⚠️必须预约！公众号'山东博物馆'，免费，周一闭馆", "stay_duration": "2.5-3小时", "latitude": 36.658157, "longitude": 117.095731, "amap_url": "https://uri.amap.com/marker?position=117.095731,36.658157&name=%E5%B1%B1%E4%B8%9C%E5%8D%9A%E7%89%A9%E9%A6%86&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "洪家楼天主教堂", "city": "济南", "type": "attraction", "day_number": 2, "order_in_day": 4, "time_slot": "afternoon", "description": "哥特式建筑，全国三大天主教堂之一，很出片", "tips": "⚠️需确认是否开放参观，有时不对外开放", "stay_duration": "40分钟", "latitude": 36.686232, "longitude": 117.065923, "amap_url": "https://uri.amap.com/marker?position=117.065923,36.686232&name=%E6%B4%AA%E5%AE%B6%E6%A5%BC%E5%A4%A9%E4%B8%BB%E6%95%99%E5%A0%82&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "宽厚里", "city": "济南", "type": "shopping", "day_number": 2, "order_in_day": 5, "time_slot": "evening", "description": "济南版宽窄巷子，网红店聚集，夜景好看", "tips": "把子肉、鲜馅水饺、烧烤，边逛边吃", "stay_duration": "2小时", "latitude": 36.663559, "longitude": 117.030905, "amap_url": "https://uri.amap.com/marker?position=117.030905,36.663559&name=%E5%AE%BD%E5%8E%9A%E9%87%8C&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "黑虎泉", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 1, "time_slot": "morning", "description": "三个虎头喷泉气势磅礴！居民在这打泉水喝，烟火气十足", "tips": "免费，清晨最美，可以接泉水尝一口", "stay_duration": "1.5小时", "latitude": 36.662414, "longitude": 117.033525, "amap_url": "https://uri.amap.com/marker?position=117.033525,36.662414&name=%E9%BB%91%E8%99%8E%E6%B3%89&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "解放阁", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 2, "time_slot": "morning", "description": "纪念济南解放的标志性建筑，登阁眺望黑虎泉和护城河全景", "tips": "免费参观", "stay_duration": "30分钟", "latitude": 36.663178, "longitude": 117.033627, "amap_url": "https://uri.amap.com/marker?position=117.033627,36.663178&name=%E8%A7%A3%E6%94%BE%E9%98%81&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "超意兴(大观园店)", "city": "济南", "type": "restaurant", "day_number": 3, "order_in_day": 3, "time_slot": "noon", "description": "济南灵魂快餐！把子肉+米饭+四季豆，便宜大碗绝对正宗", "tips": "人均15-20元，体验地道济南人日常", "stay_duration": "30分钟", "latitude": 36.660864, "longitude": 116.996505, "amap_url": "https://uri.amap.com/marker?position=116.996505,36.660864&name=%E8%B6%85%E6%84%8F%E5%85%B4&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "百花洲历史文化街区", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 4, "time_slot": "afternoon", "description": "古建筑群+民俗展览+手工艺品，泉水人家原生态体验", "tips": "免费，紧邻大明湖", "stay_duration": "1.5小时", "latitude": 36.669214, "longitude": 117.024493, "amap_url": "https://uri.amap.com/marker?position=117.024493,36.669214&name=%E7%99%BE%E8%8A%B1%E6%B4%B2%E5%8E%86%E5%8F%B2%E6%96%87%E5%8C%96%E8%A1%97%E5%8C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "护城河游船", "city": "济南", "type": "attraction", "day_number": 3, "order_in_day": 5, "time_slot": "afternoon", "description": "从黑虎泉到趵突泉，水上看泉城别有一番风味", "tips": "约100元/人，全程约1小时", "stay_duration": "1小时", "latitude": 36.662464, "longitude": 117.032243, "amap_url": "https://uri.amap.com/marker?position=117.032243,36.662464&name=%E6%8A%A4%E5%9F%8E%E6%B2%B3%E6%B8%B8%E8%88%B9&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "舜耕路美食街", "city": "济南", "type": "restaurant", "day_number": 3, "order_in_day": 6, "time_slot": "evening", "description": "济南烧烤不输淄博！烤羊腰、烤大虾、烤馒头片", "tips": "人均60-100元，配趵突泉啤酒🍺", "stay_duration": "2小时", "latitude": 36.624775, "longitude": 117.018425, "amap_url": "https://uri.amap.com/marker?position=117.018425,36.624775&name=%E8%88%9C%E8%80%95%E8%B7%AF%E7%BE%8E%E9%A3%9F%E8%A1%97&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}, {"name": "泉城广场", "city": "济南", "type": "attraction", "day_number": 4, "order_in_day": 1, "time_slot": "morning", "description": "泉标雕塑打卡，清晨泉城广场很清爽，给旅程画句号", "tips": "预留2小时去机场，打车约40分钟", "stay_duration": "30-40分钟", "latitude": 36.661373, "longitude": 117.022086, "amap_url": "https://uri.amap.com/marker?position=117.022086,36.661373&name=%E6%B3%89%E5%9F%8E%E5%B9%BF%E5%9C%BA&coordinate=gaode", "amap_place_id": "", "google_place_id": "", "google_maps_url": ""}]};
+
+const DAY_COLORS = ['#ef4444','#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#6366f1'];
+const DAY_BG     = ['#fef2f2','#eff6ff','#f0fdf4','#fefce8','#faf5ff','#fdf2f8','#eef2ff'];
+const DAY_BORDER = ['#f87171','#60a5fa','#4ade80','#facc15','#c084fc','#f472b6','#818cf8'];
+const TYPE_ICONS = { attraction: '🏛️', restaurant: '🍜', shopping: '🛍️', hotel: '🏨', other: '📍' };
+
+const STORAGE_KEY = 'travel-plan-order-' + (TRIP_DATA.id || document.title);
+
+let places = TRIP_DATA.places || [];
+let map, infoWindow;
+let markers = [];
+let polylines = [];
+
+function saveOrder() {
+  const order = {};
+  places.forEach(p => { order[p.name] = { day_number: p.day_number, order_in_day: p.order_in_day }; });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+}
+
+function loadOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved) return;
+    places.forEach(p => {
+      if (saved[p.name]) {
+        p.day_number = saved[p.name].day_number;
+        p.order_in_day = saved[p.name].order_in_day;
+      }
+    });
+  } catch {}
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  return Math.acos(
+    Math.sin(toRad(lat1)) * Math.sin(toRad(lat2)) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1))
+  ) * 6371;
+}
+
+function groupByDay() {
+  const days = {};
+  const totalDays = TRIP_DATA.total_days || 1;
+  for (let d = 1; d <= totalDays; d++) days[d] = [];
+  places.forEach(p => {
+    const d = p.day_number || 'unassigned';
+    if (!days[d]) days[d] = [];
+    days[d].push(p);
+  });
+  Object.values(days).forEach(arr => arr.sort((a, b) => (a.order_in_day || 0) - (b.order_in_day || 0)));
+  return days;
+}
+
+function getMapUrl(place) {
+  return place.amap_url || place.google_maps_url || '';
+}
+
+function dayNavUrl(dayPlaces) {
+  const pts = dayPlaces.filter(p => p.latitude && p.longitude);
+  if (pts.length === 0) return '';
+  const origin = pts[0];
+  const dest = pts[pts.length - 1];
+  const mid = pts.slice(1, -1).map(p => `${p.longitude},${p.latitude}`).join(';');
+  let url = `https://uri.amap.com/navigation?from=${origin.longitude},${origin.latitude},${encodeURIComponent(origin.name)}&to=${dest.longitude},${dest.latitude},${encodeURIComponent(dest.name)}&mode=bus&coordinate=gaode`;
+  if (mid) url += `&via=${mid}`;
+  return url;
+}
+
+function renderSidebar() {
+  const days = groupByDay();
+  const container = document.getElementById('sidebar-content');
+  container.innerHTML = '';
+
+  document.getElementById('trip-title').textContent = TRIP_DATA.title || 'Travel Plan';
+  document.getElementById('trip-subtitle').textContent = TRIP_DATA.subtitle || '';
+
+  const sortedKeys = Object.keys(days).sort((a, b) => {
+    if (a === 'unassigned') return 1;
+    if (b === 'unassigned') return -1;
+    return Number(a) - Number(b);
+  });
+
+  sortedKeys.forEach(dayKey => {
+    const dayPlaces = days[dayKey];
+    const isUnassigned = dayKey === 'unassigned';
+    const dayNum = isUnassigned ? null : Number(dayKey);
+    const colorIdx = dayNum ? (dayNum - 1) % DAY_COLORS.length : -1;
+
+    const group = document.createElement('div');
+    group.className = 'day-group';
+    group.style.borderLeftColor = colorIdx >= 0 ? DAY_BORDER[colorIdx] : '#d1d5db';
+    group.style.background = colorIdx >= 0 ? DAY_BG[colorIdx] : '#f9fafb';
+
+    const header = document.createElement('div');
+    header.className = 'day-group-header';
+
+    const dayInfo = TRIP_DATA.day_labels && TRIP_DATA.day_labels[dayKey];
+    const title = document.createElement('span');
+    title.className = 'day-group-title';
+    title.textContent = isUnassigned ? '未分配' : (dayInfo ? `第 ${dayNum} 天 — ${dayInfo}` : `第 ${dayNum} 天`);
+    header.appendChild(title);
+
+    if (!isUnassigned && dayPlaces.length > 0) {
+      const navUrl = dayNavUrl(dayPlaces);
+      if (navUrl) {
+        const navLink = document.createElement('a');
+        navLink.className = 'day-nav-link';
+        navLink.href = navUrl;
+        navLink.target = '_blank';
+        navLink.textContent = '导航 ↗';
+        header.appendChild(navLink);
+      }
+    }
+    group.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'place-list';
+    list.dataset.day = dayKey;
+
+    if (dayPlaces.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'place-list-empty';
+      empty.textContent = '拖拽地点到这里';
+      list.appendChild(empty);
+    }
+
+    dayPlaces.forEach((place, idx) => {
+      const card = document.createElement('div');
+      card.className = 'place-card';
+      card.dataset.placeName = place.name;
+
+      const mapUrl = getMapUrl(place);
+      let html = '<div class="place-name">';
+      html += `<span>${TYPE_ICONS[place.type] || TYPE_ICONS.other}</span>`;
+      if (mapUrl) {
+        html += `<a href="${mapUrl}" target="_blank" class="place-link" style="font-size:13px;font-weight:600;color:#1f2937;text-decoration:none;">${place.name}</a>`;
+      } else {
+        html += `<span>${place.name}</span>`;
+      }
+      html += `<span class="place-type-badge type-${place.type || 'other'}">${place.type || 'other'}</span>`;
+      html += '</div>';
+
+      if (place.stay_duration) html += `<div class="place-meta">⏰ ${place.stay_duration}</div>`;
+      if (place.description) html += `<div class="place-desc">💡 ${place.description}</div>`;
+      if (place.tips) html += `<div class="place-tips">📝 ${place.tips}</div>`;
+      if (mapUrl) html += `<a href="${mapUrl}" target="_blank" class="place-link">高德地图 ↗</a>`;
+
+      if (idx > 0) {
+        const prev = dayPlaces[idx - 1];
+        if (prev.latitude && prev.longitude && place.latitude && place.longitude) {
+          const dist = haversineKm(prev.latitude, prev.longitude, place.latitude, place.longitude);
+          if (dist > 0) html += `<div class="place-distance">↕ ${dist.toFixed(1)} km</div>`;
+        }
+      }
+
+      card.innerHTML = html;
+      card.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A') return;
+        if (place.latitude && place.longitude) {
+          map.setCenter([place.longitude, place.latitude]);
+          map.setZoom(15);
+          showInfoWindow(place);
+        }
+      });
+      list.appendChild(card);
+    });
+
+    group.appendChild(list);
+    container.appendChild(group);
+
+    new Sortable(list, {
+      group: 'places',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd: function() {
+        updateOrderFromDOM();
+        saveOrder();
+        renderSidebar();
+        renderMap();
+      }
+    });
+  });
+}
+
+function updateOrderFromDOM() {
+  const lists = document.querySelectorAll('.place-list');
+  lists.forEach(list => {
+    const dayKey = list.dataset.day;
+    const cards = list.querySelectorAll('.place-card');
+    cards.forEach((card, idx) => {
+      const name = card.dataset.placeName;
+      const place = places.find(p => p.name === name);
+      if (place) {
+        place.day_number = dayKey === 'unassigned' ? null : Number(dayKey);
+        place.order_in_day = idx + 1;
+      }
+    });
+  });
+}
+
+function renderMap() {
+  markers.forEach(m => map.remove(m));
+  polylines.forEach(p => map.remove(p));
+  markers = [];
+  polylines = [];
+
+  const days = groupByDay();
+  const allMarkers = [];
+
+  Object.entries(days).forEach(([dayKey, dayPlaces]) => {
+    if (dayKey === 'unassigned') return;
+    const dayNum = Number(dayKey);
+    const color = DAY_COLORS[(dayNum - 1) % DAY_COLORS.length];
+    const path = [];
+
+    dayPlaces.forEach((place, idx) => {
+      if (!place.latitude || !place.longitude) return;
+      const pos = [place.longitude, place.latitude];
+      path.push(pos);
+
+      const marker = new AMap.Marker({
+        position: pos,
+        content: `<div style="background:${color};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);">${idx + 1}</div>`,
+        offset: new AMap.Pixel(-12, -12),
+        title: place.name,
+      });
+      marker.on('click', () => showInfoWindow(place));
+      map.add(marker);
+      markers.push(marker);
+      allMarkers.push(marker);
+    });
+
+    if (path.length >= 2) {
+      const polyline = new AMap.Polyline({
+        path: path,
+        strokeColor: color,
+        strokeWeight: 3,
+        strokeOpacity: 0.8,
+      });
+      map.add(polyline);
+      polylines.push(polyline);
+    }
+  });
+
+  if (allMarkers.length > 0) map.setFitView(allMarkers, false, [50, 50, 50, 50]);
+
+  renderLegend(days);
+}
+
+function showInfoWindow(place) {
+  if (!place.latitude || !place.longitude) return;
+  const mapUrl = getMapUrl(place);
+  const mapsLink = mapUrl
+    ? `<a href="${mapUrl}" target="_blank" style="font-size:12px;color:#2563eb;margin-top:6px;display:inline-block;">在高德地图中打开 ↗</a>`
+    : '';
+  if (infoWindow) infoWindow.close();
+  infoWindow = new AMap.InfoWindow({
+    content: `
+      <div style="padding:4px 8px;max-width:220px;">
+        <div style="font-weight:600;font-size:14px;">${place.name}</div>
+        <div style="font-size:12px;color:#888;margin-top:2px;">
+          ${place.type || ''}${place.day_number ? ' · 第 ' + place.day_number + ' 天' : ''}
+        </div>
+        ${place.description ? `<div style="font-size:12px;color:#666;margin-top:4px;">${place.description}</div>` : ''}
+        ${mapsLink}
+      </div>
+    `,
+    offset: new AMap.Pixel(0, -12),
+  });
+  infoWindow.open(map, [place.longitude, place.latitude]);
+}
+
+function renderLegend(days) {
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  const dayNums = Object.keys(days).filter(k => k !== 'unassigned').map(Number).sort((a, b) => a - b);
+  dayNums.forEach(d => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-dot" style="background:${DAY_COLORS[(d-1) % DAY_COLORS.length]}"></span><span style="color:#4b5563;">第 ${d} 天</span>`;
+    item.addEventListener('click', () => {
+      const dayPlaces = (groupByDay()[d] || []).filter(p => p.latitude && p.longitude);
+      if (dayPlaces.length === 0) return;
+      const dayMarkers = markers.filter((m, i) => {
+        const allDayIdxs = [];
+        let offset = 0;
+        const days2 = groupByDay();
+        for (const [dk, dp] of Object.entries(days2)) {
+          if (dk === 'unassigned') continue;
+          const valid = dp.filter(p => p.latitude && p.longitude);
+          if (Number(dk) === d) {
+            for (let j = 0; j < valid.length; j++) allDayIdxs.push(offset + j);
+          }
+          offset += valid.length;
+        }
+        return allDayIdxs.includes(i);
+      });
+      if (dayMarkers.length > 0) map.setFitView(dayMarkers, false, [50, 50, 50, 50]);
+    });
+    legend.appendChild(item);
+  });
+}
+
+function init() {
+  loadOrder();
+
+  const firstPlace = places.find(p => p.latitude && p.longitude);
+  const center = firstPlace ? [firstPlace.longitude, firstPlace.latitude] : [116.397428, 39.90923];
+
+  map = new AMap.Map('map', {
+    center: center,
+    zoom: 11,
+    mapStyle: 'amap://styles/normal',
+  });
+
+  renderSidebar();
+  renderMap();
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
